@@ -94,7 +94,9 @@ def search_raw_course(deptartment: str, number: int, courses: list[dict]) -> lis
     return course_list
 
 
-def search_course(department: str, number: int, courses: list[course]) -> list[course]:
+def search_course_basic(
+    department: str, number: int, courses: list[course]
+) -> list[course]:
     course_list = [
         course
         for course in courses
@@ -102,6 +104,44 @@ def search_course(department: str, number: int, courses: list[course]) -> list[c
     ]
 
     return course_list
+
+
+def match_search_course(
+    courses: list[course],
+    department: str | None = None,
+    course_number: int | None = None,
+    suffix: str | None = None,
+    school: str | None = None,
+    section: int | None = None,
+) -> list[course]:
+
+    return [
+        course_
+        for course_ in courses
+        if (
+            department in [course_.department, None]
+            and course_number in [course_.course_number, None]
+            and suffix in [course_.suffix, None]
+            and school in [course_.school, None]
+            and section in [course_.section, None]
+        )
+    ]
+
+
+def better_course_search(courses: list[course], **filters) -> list[course]:
+    """Each filter will take a lambda, for each key in filter, do filter[key](getattr(c, key))"""
+    return [
+        course_
+        for course_ in courses
+        if all(
+            (
+                condition(getattr(course_, field))
+                if callable(condition)
+                else getattr(course_, field) == condition
+            )
+            for field, condition in filters.items()
+        )
+    ]
 
 
 def print_raw_course(course: dict) -> None:
@@ -116,11 +156,30 @@ def print_raw_course(course: dict) -> None:
 if __name__ == "__main__":
     courses_raw = file_loader("./src/data/SP2027.json")
 
-    course_list = dict_list_to_course_list(courses_raw)
+    courses_list = dict_list_to_course_list(courses_raw)
 
-    results = search_course("MATH", 127, course_list)
+    # results = search_course_basic("MATH", 127, courses_list)
 
-    if results:
+    results = match_search_course(
+        courses=courses_list, department="CSCI", school="PO", suffix="AG"
+    )
+
+    print(
+        *better_course_search(
+            courses=courses_list,
+            department="MATH",
+            course_number=lambda i: bool(0 <= i <= 100),
+            school="HM",
+            times=lambda blocks: all(
+                bool(block_.start_time > 14 * 3600 + 45 * 60)
+                for block_ in blocks
+                if "M" in block_.days
+            ),
+        ),
+        sep="\n",
+    )
+
+    if not results:
         print(*[f"COURSE {course_}" for course_ in results], sep="\n")
     # out = search_course(dept="MATH", number=127, courses=courses)
 
