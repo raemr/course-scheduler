@@ -1,3 +1,4 @@
+import itertools
 import json
 
 from .structs import block, course
@@ -52,6 +53,15 @@ def dict_list_to_course_list(dict_list: list[dict]) -> list[course]:
         )
 
     return [dict_to_course(course_dict) for course_dict in dict_list]
+
+
+def make_raw_formatted_dict(raws: list[dict], processeds: list[course]) -> dict:
+    hash = {}
+
+    for raw, processed in zip(raws, processeds):
+        hash[processed.key] = raw
+
+    return hash
 
 
 def search_raw_courses(department: str, number: int, courses: list[dict]) -> list[dict]:
@@ -147,19 +157,28 @@ def print_raw_course(course: dict) -> None:
 if __name__ == "__main__":
     courses_raw = file_loader("./src/data/SP2027.json")
 
-    courses_list = dict_list_to_course_list(courses_raw)
+    courses_processed = dict_list_to_course_list(courses_raw)
 
-    print(
-        *better_course_search(
-            courses=courses_list,
-            department="MATH",
-            course_number=lambda i: bool(0 <= i <= 100),
-            school="HM",
-            times=lambda blocks: all(
-                bool(block_.start_time > 14 * 3600 + 45 * 60)
-                for block_ in blocks
-                if "M" in block_.days
-            ),
+    course_table = make_raw_formatted_dict(courses_raw, courses_processed)
+
+    results = better_course_search(
+        courses=courses_processed,
+        department="MATH",
+        course_number=lambda i: bool(0 <= i <= 100),
+        school="HM",
+        times=lambda blocks: all(
+            bool(block_.start_time > 14 * 3600 + 45 * 60)
+            for block_ in blocks
+            if "M" in block_.days
         ),
-        sep="\n",
     )
+
+    for result in results:
+        print("RAW IDENTIFIER", course_table[result.key]["identifier"])
+
+    c = 0
+    for item in course_table:
+        if c < 10:
+            print(f"TABLE ITEM {item}: {course_table[item]['identifier']}")
+        else:
+            break
