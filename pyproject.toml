@@ -9,6 +9,9 @@ authors = [
 requires-python = ">=3.14"
 dependencies = []
 
+[tool.uv]
+package=true
+
 [project.scripts]
 course-scheduler = "course_scheduler:main"
 

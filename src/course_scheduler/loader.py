@@ -1,5 +1,7 @@
 import json
 
+from .structs import block, course
+
 
 def file_loader(course_file_path: str) -> list[dict]:
     """
@@ -16,16 +18,17 @@ def file_loader(course_file_path: str) -> list[dict]:
         return courses
 
 
-def test_course_schema(courses: dict) -> None:
-
-    count = 0
-
-    for course in courses:
-        if count < 3:
-            print(json.dumps(course, indent=4), "\n\n\n")
-            count += 1
-        else:
-            raise SystemExit("run 3 times")
+# def test_course_schema(courses: dict) -> None:
+#
+#     count = 0
+#
+#     for course in courses:
+#         if count < 3:
+#             print(json.dumps(course, indent=4), "\n\n\n")
+#             count += 1
+#         else:
+#             raise SystemExit("run 3 times")
+#
 
 
 def validate_course_keys(courses: list[dict]) -> bool:
@@ -51,7 +54,76 @@ def validate_course_keys(courses: list[dict]) -> bool:
     return True
 
 
-if __name__ == "__main__":
-    courses = file_loader("./src/data/SP2027.json")
+def dict_list_to_course_list(dict_list: list[dict]) -> list[course]:
 
-    print(validate_course_keys(courses))
+    def dict_to_course(course_dict: dict):
+
+        def times_to_blocks(blocks: list[dict]) -> list[block]:
+            return [
+                block(
+                    start_time=time["startTime"],
+                    end_time=time["endTime"],
+                    days=time["days"],
+                    locations=time["locations"],
+                )
+                for time in blocks
+            ]
+
+        return course(
+            department=course_dict["identifier"]["department"],
+            course_number=course_dict["identifier"]["courseNumber"],
+            suffix=course_dict["identifier"]["suffix"],
+            school=course_dict["identifier"]["affiliation"],
+            section=course_dict["identifier"]["sectionNumber"],
+            times=times_to_blocks(course_dict["schedules"]),
+        )
+
+    return [dict_to_course(course_dict) for course_dict in dict_list]
+
+
+def search_raw_course(deptartment: str, number: int, courses: list[dict]) -> list[dict]:
+    course_list = [
+        course
+        for course in courses
+        if (
+            course["identifier"]["department"] == deptartment
+            and course["identifier"]["courseNumber"] == number
+        )
+    ]
+
+    return course_list
+
+
+def search_course(department: str, number: int, courses: list[course]) -> list[course]:
+    course_list = [
+        course
+        for course in courses
+        if (course.department == department and course.course_number == number)
+    ]
+
+    return course_list
+
+
+def print_raw_course(course: dict) -> None:
+
+    # for key in course:
+    #     print(f"KEY {key}: {course[key]} \n")
+
+    for key, item in course.items():
+        print(f"KEY {key}: {item} \n")
+
+
+if __name__ == "__main__":
+    courses_raw = file_loader("./src/data/SP2027.json")
+
+    course_list = dict_list_to_course_list(courses_raw)
+
+    results = search_course("MATH", 127, course_list)
+
+    if results:
+        print(*[f"COURSE {course_}" for course_ in results], sep="\n")
+    # out = search_course(dept="MATH", number=127, courses=courses)
+
+    #
+    # if out:
+    #     print_course(out[0])
